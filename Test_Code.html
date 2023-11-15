@@ -1,0 +1,94 @@
+<?php
+// Start session to manage user authentication
+session_start();
+
+// Dummy user credentials for demonstration purposes
+$dummy_username = 'user';
+$dummy_password = 'password';
+
+// Check if the user is logged in
+$is_logged_in = false;
+if (isset($_SESSION['username']) && $_SESSION['username'] === $dummy_username) {
+    $is_logged_in = true;
+}
+
+// Dummy comments for demonstration purposes
+$comments = array(
+    array('username' => 'JohnDoe', 'comment' => 'This is a great page!'),
+    array('username' => 'JaneSmith', 'comment' => 'I love the content.'),
+);
+
+// Database connection (dummy connection for demonstration purposes)
+$servername = 'localhost';
+$username = 'root';
+$password = '';
+$dbname = 'comments_database';
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die('Connection failed: ' . $conn->connect_error);
+}
+
+// Function to add a comment to the database
+function addComment($username, $comment) {
+    global $conn;
+
+    $stmt = $conn->prepare('INSERT INTO comments (username, comment) VALUES (?, ?)');
+    $stmt->bind_param('ss', $username, $comment);
+
+    $stmt->execute();
+    $stmt->close();
+}
+
+// Handle form submission to add a comment
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
+    if ($is_logged_in) {
+        $new_comment = $_POST['comment'];
+        addComment($_SESSION['username'], $new_comment);
+        // Refresh the page to display the new comment
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit();
+    }
+}
+
+// Close the database connection
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complex PHP Web Page</title>
+</head>
+<body>
+
+<?php if ($is_logged_in) : ?>
+    <p>Welcome, <?php echo $_SESSION['username']; ?>! (<a href="?logout=true">Logout</a>)</p>
+<?php else : ?>
+    <p><a href="login.php">Login</a> to post comments.</p>
+<?php endif; ?>
+
+<h1>Web Page with Comments</h1>
+
+<?php foreach ($comments as $comment) : ?>
+    <div>
+        <strong><?php echo $comment['username']; ?>:</strong>
+        <p><?php echo $comment['comment']; ?></p>
+    </div>
+<?php endforeach; ?>
+
+<?php if ($is_logged_in) : ?>
+    <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
+        <label for="comment">Add a Comment:</label>
+        <textarea id="comment" name="comment" rows="4" cols="50" required></textarea>
+        <br>
+        <button type="submit">Submit Comment</button>
+    </form>
+<?php endif; ?>
+
+</body>
+</html>
